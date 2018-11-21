@@ -5,6 +5,7 @@
 package specific
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -14,6 +15,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"regexp"
+	"strings"
 )
 
 type Options struct {
@@ -25,7 +28,7 @@ var DefaultOptions = Options{
 }
 
 // Process creates a specific package from the generic specified in pkg
-func Process(pkg, outdir string, newType string, optset ...func(*Options)) error {
+func Process(pkg, outdir, verb, newType string, optset ...func(*Options)) error {
 	opts := DefaultOptions
 	for _, fn := range optset {
 		fn(&opts)
@@ -40,18 +43,27 @@ func Process(pkg, outdir string, newType string, optset ...func(*Options)) error
 		outdir = path.Base(pkg)
 	}
 
+	if verb == "" {
+		return errors.New("Need a REST verb")
+	}
+	verb = strings.ToLower(verb)
+
 	if err := os.MkdirAll(outdir, os.ModePerm); err != nil {
 		return err
 	}
 
 	t := parseTargetType(newType)
 
-	files, err := processFiles(p, p.GoFiles, t)
+	files, err := processFiles(p, verb, p.GoFiles, t)
 	if err != nil {
 		return err
 	}
 
-	if err := write(outdir, files); err != nil {
+	if len(files) == 0 {
+		return nil
+	}
+
+	if err := write(t, verb, outdir, files); err != nil {
 		return err
 	}
 
@@ -59,22 +71,24 @@ func Process(pkg, outdir string, newType string, optset ...func(*Options)) error
 		return nil
 	}
 
-	files, err = processFiles(p, p.TestGoFiles, t)
+	files, err = processFiles(p, verb, p.TestGoFiles, t)
 	if err != nil {
 		return err
 	}
 
-	return write(outdir, files)
+	return write(t, verb, outdir, files)
 }
 
-func processFiles(p Package, files []string, t targetType) ([]processedFile, error) {
+func processFiles(p Package, verb string, files []string, t targetType) ([]processedFile, error) {
 	var result []processedFile
 	for _, f := range files {
-		res, err := processFile(p, f, t)
-		if err != nil {
-			return result, err
+		if strings.Contains(f, verb) {
+			res, err := processFile(p, f, t)
+			if err != nil {
+				return result, err
+			}
+			result = append(result, res)
 		}
-		result = append(result, res)
 	}
 	return result, nil
 }
@@ -110,6 +124,7 @@ func replace(t targetType, n ast.Node) (replaced bool) {
 		if node == nil {
 			return
 		}
+
 		switch n := node.(type) {
 		case *ast.ArrayType:
 			if t, ok := n.Elt.(*ast.InterfaceType); ok && t.Methods.NumFields() == 0 {
@@ -125,19 +140,27 @@ func replace(t targetType, n ast.Node) (replaced bool) {
 				n.Value = str
 				replaced = true
 			}
-		case *ast.MapType:
-			if t, ok := n.Key.(*ast.InterfaceType); ok && t.Methods.NumFields() == 0 {
-				str := ast.NewIdent(newType)
-				str.NamePos = t.Pos()
-				n.Key = str
-				replaced = true
-			}
-			if t, ok := n.Value.(*ast.InterfaceType); ok && t.Methods.NumFields() == 0 {
-				str := ast.NewIdent(newType)
-				str.NamePos = t.Pos()
-				n.Value = str
-				replaced = true
-			}
+		// case *ast.MapType:
+		// 	if t, ok := n.Key.(*ast.InterfaceType); ok && t.Methods.NumFields() == 0 {
+		// 		str := ast.NewIdent(newType)
+		// 		str.NamePos = t.Pos()
+		// 		n.Key = str
+		// 		replaced = true
+		// 	}
+		// 	if t, ok := n.Value.(*ast.InterfaceType); ok && t.Methods.NumFields() == 0 {
+		// 		str := ast.NewIdent(newType)
+		// 		str.NamePos = t.Pos()
+		// 		n.Value = str
+		// 		replaced = true
+		// 	}
+
+		case *ast.Comment:
+			n.Text = strings.Replace(n.Text, "Temp", newType, 1)
+
+		case *ast.Ident:
+			n.Name = strings.Replace(n.Name, "Temp", newType, 1)
+			n.Name = strings.Replace(n.Name, "temp", strings.ToLower(newType), 1)
+
 		case *ast.Field:
 			if t, ok := n.Type.(*ast.InterfaceType); ok && t.Methods.NumFields() == 0 {
 				str := ast.NewIdent(newType)
@@ -157,17 +180,23 @@ func (fn visitFn) Visit(node ast.Node) ast.Visitor {
 	return fn
 }
 
-func write(outdir string, files []processedFile) error {
+var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
+
+func toSnakeCase(str string) string {
+	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	return strings.ToLower(snake)
+}
+
+func write(t targetType, verb, outdir string, files []processedFile) error {
 	for _, f := range files {
-		out, err := os.Create(path.Join(outdir, f.filename))
+		out, err := os.Create(path.Join(outdir, strings.Replace(f.filename, "temp", toSnakeCase(t.newType), 1)))
 		if err != nil {
 			return FileError{Package: outdir, File: f.filename, Err: err}
 		}
 
-		fmt.Fprintf(out, "/*\n"+
-			"* CODE GENERATED AUTOMATICALLY WITH github.com/ernesto-jimenez/gogen/specific\n"+
-			"* THIS FILE SHOULD NOT BE EDITED BY HAND\n"+
-			"*/\n\n")
+		fmt.Fprintf(out, "// +build "+verb+t.newType+"\n\n")
 		printer.Fprint(out, f.fset, f.file)
 	}
 	return nil
