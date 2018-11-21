@@ -6,7 +6,7 @@
 package testpkg
 
 import (
-	test "github.com/ernesto-jimenez/gogen/unmarshalmap/testunmarshalmap"
+	test "github.com/fellou89/gogen/unmarshalmap/testunmarshalmap"
 	"testing"
 )
 

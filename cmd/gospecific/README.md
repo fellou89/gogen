@@ -8,7 +8,7 @@ packages that can be used with safe types.
 Install gospecific
 
 ```go
-go get github.com/ernesto-jimenez/gogen/cmd/gospecific
+go get github.com/fellou89/gogen/cmd/gospecific
 ```
 
 Add a go generate comment to generate a package
@@ -27,7 +27,7 @@ Now you will have your own `list` package to store strings rather than
 `interface{}`
 
 ```sh
-% godoc github.com/ernesto-jimenez/gogen/list | egrep 'func.+string'
+% godoc github.com/fellou89/gogen/list | egrep 'func.+string'
 ```
 
 ```go

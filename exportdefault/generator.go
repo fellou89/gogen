@@ -31,8 +31,8 @@ import (
 	"regexp"
 	"text/template"
 
-	"github.com/ernesto-jimenez/gogen/cleanimports"
-	"github.com/ernesto-jimenez/gogen/imports"
+	"github.com/fellou89/gogen/cleanimports"
+	"github.com/fellou89/gogen/imports"
 )
 
 // Generator contains the metadata needed to generate all the function wrappers

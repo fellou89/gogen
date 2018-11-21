@@ -4,7 +4,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/ernesto-jimenez/gogen/specific"
+	"github.com/fellou89/gogen/specific"
 )
 
 var (

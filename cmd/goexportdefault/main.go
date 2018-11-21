@@ -7,8 +7,8 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/ernesto-jimenez/gogen/exportdefault"
-	"github.com/ernesto-jimenez/gogen/strconv"
+	"github.com/fellou89/gogen/exportdefault"
+	"github.com/fellou89/gogen/strconv"
 )
 
 var (

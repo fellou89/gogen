@@ -52,7 +52,7 @@ func TestWritesProperly(t *testing.T) {
 		{"net/http", "CookieJar"},
 		{"io", "Writer"},
 		{"io", "ByteScanner"},
-		{"github.com/ernesto-jimenez/gogen/automock", "unexported"},
+		{"github.com/fellou89/gogen/automock", "unexported"},
 		{".", "unexported"},
 	}
 	for _, test := range tests {

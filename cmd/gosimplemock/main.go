@@ -9,9 +9,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ernesto-jimenez/gogen/automock"
-	"github.com/ernesto-jimenez/gogen/importer"
-	"github.com/ernesto-jimenez/gogen/strconv"
+	"github.com/fellou89/gogen/automock"
+	"github.com/fellou89/gogen/importer"
+	"github.com/fellou89/gogen/strconv"
 )
 
 var (

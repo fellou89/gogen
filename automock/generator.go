@@ -8,9 +8,9 @@ import (
 	"io"
 	"text/template"
 
-	"github.com/ernesto-jimenez/gogen/cleanimports"
-	"github.com/ernesto-jimenez/gogen/importer"
-	"github.com/ernesto-jimenez/gogen/imports"
+	"github.com/fellou89/gogen/cleanimports"
+	"github.com/fellou89/gogen/importer"
+	"github.com/fellou89/gogen/imports"
 )
 
 // Generator produces code to mock an interface

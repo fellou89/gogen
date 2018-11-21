@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ernesto-jimenez/gogen/gogenutil"
+	"github.com/fellou89/gogen/gogenutil"
 )
 
 type customImporter struct {
