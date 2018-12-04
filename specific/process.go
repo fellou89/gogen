@@ -19,10 +19,12 @@ import (
 	"strings"
 )
 
+// Options struct
 type Options struct {
 	SkipTestFiles bool
 }
 
+// DefaultOptions struct
 var DefaultOptions = Options{
 	SkipTestFiles: false,
 }
@@ -79,21 +81,23 @@ func Process(pkg, outdir, verb, newType string, optset ...func(*Options)) error 
 	return write(t, verb, outdir, files)
 }
 
+func isPlural(t targetType) bool {
+	return t.newType[len(t.newType)-1:] == "s"
+}
+
 func processFiles(p Package, verb string, files []string, t targetType) ([]processedFile, error) {
 	var result []processedFile
 	for _, f := range files {
-		if strings.Contains(f, verb) {
-			res, err := processFile(p, f, t)
-			if err != nil {
-				return result, err
-			}
-			result = append(result, res)
+		res, err := processFile(p, f, t, verb)
+		if err != nil {
+			return result, err
 		}
+		result = append(result, res)
 	}
 	return result, nil
 }
 
-func processFile(p Package, filename string, t targetType) (processedFile, error) {
+func processFile(p Package, filename string, t targetType, v string) (processedFile, error) {
 	res := processedFile{filename: filename}
 
 	in, err := os.Open(path.Join(p.Dir, filename))
@@ -111,63 +115,33 @@ func processFile(p Package, filename string, t targetType) (processedFile, error
 		return res, FileError{Package: p.Dir, File: filename, Err: err}
 	}
 
-	if replace(t, res.file) && t.newPkg != "" {
+	if replace(t, res.file, v) && t.newPkg != "" {
 		astutil.AddImport(res.fset, res.file, t.newPkg)
 	}
 
 	return res, err
 }
 
-func replace(t targetType, n ast.Node) (replaced bool) {
-	newType := t.newType
+func replace(t targetType, n ast.Node, verb string) (replaced bool) {
+	verb = strings.ToUpper(verb[:1]) + verb[1:]
+
 	ast.Walk(visitFn(func(node ast.Node) {
 		if node == nil {
 			return
 		}
 
 		switch n := node.(type) {
-		case *ast.ArrayType:
-			if t, ok := n.Elt.(*ast.InterfaceType); ok && t.Methods.NumFields() == 0 {
-				str := ast.NewIdent(newType)
-				str.NamePos = t.Pos()
-				n.Elt = str
-				replaced = true
-			}
-		case *ast.ChanType:
-			if t, ok := n.Value.(*ast.InterfaceType); ok && t.Methods.NumFields() == 0 {
-				str := ast.NewIdent(newType)
-				str.NamePos = t.Pos()
-				n.Value = str
-				replaced = true
-			}
-		// case *ast.MapType:
-		// 	if t, ok := n.Key.(*ast.InterfaceType); ok && t.Methods.NumFields() == 0 {
-		// 		str := ast.NewIdent(newType)
-		// 		str.NamePos = t.Pos()
-		// 		n.Key = str
-		// 		replaced = true
-		// 	}
-		// 	if t, ok := n.Value.(*ast.InterfaceType); ok && t.Methods.NumFields() == 0 {
-		// 		str := ast.NewIdent(newType)
-		// 		str.NamePos = t.Pos()
-		// 		n.Value = str
-		// 		replaced = true
-		// 	}
-
 		case *ast.Comment:
-			n.Text = strings.Replace(n.Text, "Temp", newType, 1)
+			n.Text = strings.Replace(n.Text, "Temp", t.newType, 1)
+			n.Text = strings.Replace(n.Text, "Verb", verb, 1)
 
 		case *ast.Ident:
-			n.Name = strings.Replace(n.Name, "Temp", newType, 1)
-			n.Name = strings.Replace(n.Name, "temp", strings.ToLower(newType), 1)
+			n.Name = strings.Replace(n.Name, "templates", "service", 1)
 
-		case *ast.Field:
-			if t, ok := n.Type.(*ast.InterfaceType); ok && t.Methods.NumFields() == 0 {
-				str := ast.NewIdent(newType)
-				str.NamePos = t.Pos()
-				n.Type = str
-				replaced = true
-			}
+			n.Name = strings.Replace(n.Name, "Temp", t.newType, 1)
+			n.Name = strings.Replace(n.Name, strings.ToLower("Temp"), strings.ToLower(t.newType), 1)
+
+			n.Name = strings.Replace(n.Name, "Verb", verb, 1)
 		}
 	}), n)
 	return replaced
@@ -190,8 +164,11 @@ func toSnakeCase(str string) string {
 }
 
 func write(t targetType, verb, outdir string, files []processedFile) error {
+	verb = strings.ToUpper(verb[:1]) + verb[1:]
+
 	for _, f := range files {
-		out, err := os.Create(path.Join(outdir, strings.Replace(f.filename, "temp", toSnakeCase(t.newType), 1)))
+		out, err := os.Create(path.Join(outdir, strings.Replace(f.filename, "temp", strings.ToLower(verb)+"_"+toSnakeCase(t.newType), 1)))
+
 		if err != nil {
 			return FileError{Package: outdir, File: f.filename, Err: err}
 		}
@@ -202,6 +179,7 @@ func write(t targetType, verb, outdir string, files []processedFile) error {
 	return nil
 }
 
+// FileError Struct
 type FileError struct {
 	Package string
 	File    string

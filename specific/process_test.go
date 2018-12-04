@@ -15,7 +15,7 @@ func TestProcessContainerRingBuildsWithString(t *testing.T) {
 	}
 	defer os.Remove(out)
 
-	Process("container/ring", out, "string", func(opts *Options) {
+	Process("container/ring", out, "get", "string", func(opts *Options) {
 		opts.SkipTestFiles = true
 	})
 
@@ -31,7 +31,7 @@ func TestProcessContainerRingBuildsWithOsFile(t *testing.T) {
 	}
 	defer os.Remove(out)
 
-	Process("container/ring", out, "*os.File", func(opts *Options) {
+	Process("container/ring", out, "get", "*os.File", func(opts *Options) {
 		opts.SkipTestFiles = true
 	})
 
@@ -47,7 +47,7 @@ func TestProcessContainerList(t *testing.T) {
 	}
 	defer os.Remove(out)
 
-	Process("container/list", out, "string", func(opts *Options) {
+	Process("container/list", out, "get", "string", func(opts *Options) {
 		opts.SkipTestFiles = true
 	})
 
@@ -63,7 +63,7 @@ func TestProcessTestPkg(t *testing.T) {
 	}
 	defer os.Remove(out)
 
-	Process("github.com/fellou89/gogen/specific/_testpkg", out, "string", func(opts *Options) {
+	Process("github.com/fellou89/gogen/specific/_testpkg", out, "get", "string", func(opts *Options) {
 		opts.SkipTestFiles = true
 	})
 
